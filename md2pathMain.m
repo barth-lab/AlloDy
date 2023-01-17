@@ -348,13 +348,16 @@ MIStatsResLevel;
 graphanalysis;
 ClusterMIpathways;
 analyzeClusters;
-writeChannels;
 analyzePathDomains;
 MIanalysisBS2Effector;
 if settings.isGPCR
     pathwayBiasAnalysis;
 end
-[pHere] = visualizeClsGraph(PDB,pathstruc,Gmatmajor,1,'MIFractionCutoff',MIFractionCutoff);
+
+% To visualize allosteric pathways, specify the cluster (channel) you want
+% to visualize and run visualizeClsGraph
+allostericCluster = 1;
+[pHere] = visualizeClsGraph(PDB,pathstruc,Gmatmajor,allostericCluster,'MIFractionCutoff',MIFractionCutoff);
 % If protein is inversed along z, use this command to make it upright again
 % set(gca,'zdir','reverse')
 

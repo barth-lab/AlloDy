@@ -1,0 +1,21 @@
+MODEL        1
+ATOM      3  HN2 PRO A   1      55.970  40.129  89.411  0.00  0.00           H  
+TER
+ENDMDL
+MODEL        2
+ATOM      3  HN2 PRO A   1      48.401  43.482  89.496  0.00  0.00           H  
+TER
+ENDMDL
+MODEL        3
+ATOM      3  HN2 PRO A   1      58.762  43.497  90.597  0.00  0.00           H  
+TER
+ENDMDL
+MODEL        4
+ATOM      3  HN2 PRO A   1      55.663  40.323  91.342  0.00  0.00           H  
+TER
+ENDMDL
+MODEL        5
+ATOM      3  HN2 PRO A   1      48.520  45.217  85.484  0.00  0.00           H  
+TER
+ENDMDL
+END

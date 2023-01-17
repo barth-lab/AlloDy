@@ -46,14 +46,14 @@ settings.numRuns = 5;
 % How many frames to skip when saving xtcs to dcds
 settings.stride = 5;
 
-% Actiavtes GPCR specfic options (calculating 7 TM helices and
+% Activates GPCR specfic options (calculating 7 TM helices and
 % GPCR allosteric path calculation, as well as planned GPCR order parameters)
 settings.isGPCR = true;
 
 % Residues to be ignored in the pathway calculation, usually you want to
 % ignore floppy termini or long loops that introduce noise into the system.
 % Defaults to first and last 4 residues of the receptor chain. Assumes that
-% protein-renum, true to its name, is renumbered starting from 1.
+% protRenum, true to its name, is renumbered starting from 1.
 settings.excludedResidues = [];
 
 % The residues belonging to the 7 helical turns of a GPCR, If

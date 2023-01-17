@@ -150,4 +150,3 @@ for i=1:length(BS_GPI)
     end
     count = count+1;
 end
-writepathwayClusters(PDB,pathstruc1,1:length(pathstruc1),length(pathstruc1),fullfile(char(pathCalcdir),'BS_GPI'))

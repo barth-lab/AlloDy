@@ -44,7 +44,6 @@ The software has been tested with:
 - Matlab R2021b
 - VMD 1.9.3
 
-
 Download MDprot and add it to your Matlab path.
 Downloading can be done manually from the aforementioned link or in the command line via:
 
@@ -93,6 +92,11 @@ Where run1->N are directories that contain your trajectories
 Run *input_md2path.m* or *input_kldiv.m*
 
 Run *md2pathMain.m* or *kldivMain.m*. All the output can be found in a folder called **md2path** created in your defined directory in your input script.
+To run pathway calculation for individual trajectory clusters, setup and run *pca_1b_ligandPathCalcClusters.m* after the PCA and dihedrals sections in *md2pathmain.m*
+
+Typical runtime for calculations: 
+md2path: ~ 1 hour from start to finish on a typical PC and for around 15000-20000 frames of trajectory of a 300-400 residue GPCR
+kldiv: a few minutes assuming you only calculate 1st order KL divergences
 
 ## Acknowledgements:
 - Mutual information statistical filtering: McClendon et al., J Chem Theory Comput (2009)
