@@ -32,8 +32,18 @@ The package offers 3 functionalities: **md2path**, **kldiv**, and **meta** analy
 
 ## Installation:
 
-The functions here require the following packages:
-https://github.com/mahdiofhijaz/MDprot
+Requirements:
+- [Matlab](https://www.mathworks.com/products/matlab.html) 2021b or newer
+- [Matlab Bioinformatics toolbox](https://www.mathworks.com/products/bioinfo.html)
+- [MDprot](https://github.com/mahdiofhijaz/MDprot) package
+- [VMD](https://www.ks.uiuc.edu/Research/vmd/)
+
+The software has been tested with:
+- Windows 11 version 21H2
+- Ubuntu 18.04
+- Matlab R2021b
+- VMD 1.9.3
+
 
 Download MDprot and add it to your Matlab path.
 Downloading can be done manually from the aforementioned link or in the command line via:
