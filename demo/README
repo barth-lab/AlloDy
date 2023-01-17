@@ -1,0 +1,14 @@
+Demo README:
+
+Input:
+Sample input file, input pdb, and trajectories are given to test run md2pathMain.m
+A sample residue table for the pdb is provided in the database folder. Other reference structures will be downloaded when running md2pathMain.m
+
+Output: 
+Expected output for given short trajectories is in md2path folder. Note that the provided trajectories are too short to output anything meaningful!!!
+This also means that pathway calculation will fail starting from the sample trajectories, since entropies would not converge
+Actual pathway calculation from full trajectories is in md2path/alloPathCalc_Example
+
+Running simulations:
+gromacs_input_files.zip contains all the needed files to run full length simulations on GPU machines
+Simulations can also be run on CPU with proper changes to gpu_gromacs.sh
