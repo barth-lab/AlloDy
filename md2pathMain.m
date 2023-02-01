@@ -25,6 +25,15 @@
 % 11- Run pathway calculation
 
 
+%% Run this to get Residue wise MI
+
+md2pathdir = fullfile(settings.mydir, "md2path");
+pathCalcdir = fullfile(md2pathdir, sprintf("%s", 'alloPathCalc'));
+
+load(fullfile(pathCalcdir,"workspace.mat"))
+
+prepSimpleMI
+
 %% Check that the data directory exists
 
 assert(logical(exist(settings.mydir, 'dir')), "Directory does not exist!!! Please point to an existing directory!");
@@ -341,7 +350,13 @@ pathCalcdir = prepareAlloPathCalc( ...
 % nearcutoff = 7.5;
 % overlapcutoff = 0.75;
 
+md2pathdir = fullfile(settings.mydir, "md2pathdev");
+pathCalcdir = fullfile(md2pathdir, sprintf("%s", 'alloPathCalc'));
+
 load(fullfile(pathCalcdir,"workspace.mat"))
+
+prepSimpleMI
+
 
 prepMI;
 MIStatsResLevel;

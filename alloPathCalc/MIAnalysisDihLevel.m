@@ -96,7 +96,7 @@ for i=1:natom
 end
 dismat = sqrt(dismat);
 
-MItable = repmat(' ',length(dihtype)*(length(dihtype)-1)/2,72);
+MItable = repmat(' ',length(dihtype)*(length(dihtype)-1)/2,76);
 MItable1 = zeros(length(dihtype)*(length(dihtype)-1)/2,10);
 count = 1;
 intertorsiondis = zeros(length(MI),length(MI));
@@ -111,10 +111,10 @@ for i=1:length(dihtype)-1
         end
         ata1 = dihedral(i,1); ata2 = dihedral(i,2);
         atb1 = dihedral(j,1); atb2 = dihedral(j,2);
-        str1 = sprintf('%s%3d:%s -   %s%3d:%s',...
+        str1 = sprintf('%s%4d:%s -   %s%4d:%s',...
             char(resname(ata1)),resno(ata1),(atomname(ata1,:)),...
             char(resname(ata2)),resno(ata2),(atomname(ata2,:)));
-        str2 = sprintf('%s%3d:%s -   %s%3d:%s',...
+        str2 = sprintf('%s%4d:%s -   %s%4d:%s',...
             char(resname(atb1)),resno(atb1),(atomname(atb1,:)),...
             char(resname(atb2)),resno(atb2),(atomname(atb2,:)));
         MItable(count,:) = sprintf('%s   %s   %d   %f',str1,str2,MItype,MI(i,j));
