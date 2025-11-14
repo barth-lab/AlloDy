@@ -1,25 +1,52 @@
+% Clustering algorithms:
+% Spectral clustering performs fine with pathoverlap
+% But it does not work at all with similarity from step 2 of clustering,
+% and it simply gives 1 huge cluster 
+
 
 % compute inter-pathway distances and overlaps
+diffFactor = 0.2; % Scales penalty to path length differences during overlap calculations
+% diffFactor > 1 - overlapcutoff --> smaller paths cannot integrate with
+% larger overlapping paths
+% diffFactor < 1 - overlapcutoff --> smaller paths can integrate with
+% larger overlapping paths
+
+% Define overlapcutoff for jaccard:
+% overlapcutoff =(min([pathstruc(I(1:Npath)).Npath])/max([pathstruc(I(1:Npath)).Npath]))+0.1;
+
 pathdis = zeros(Npath,Npath);
 pathoverlap = ones(Npath,Npath);
 pathlendiff = max([pathstruc(I(1:Npath)).Npath]) - min([pathstruc(I(1:Npath)).Npath]);
 for i=1:Npath-1
     path1 = pathstruc(I(i)).path;
+    if mod(i,100) == 0 % Debug
+        i
+    end
     for j=i+1:Npath
         path2 = pathstruc(I(j)).path;
         pathDistances = dismat(path1,path2);
         [N1,N2] = size(pathDistances);
-        mindis = min( mean(min(pathDistances)),mean(min(pathDistances')) ); % POSSIBLE ISSUE: definition of pathdis 
+        mindis = min( mean(min(pathDistances)),mean(min(pathDistances')) ); 
         pathdis(i,j) = mindis;
         pathdis(j,i) = mindis;
         near1 = sum(min(pathDistances')<nearcutoff);
         near2 = sum(min(pathDistances )<nearcutoff);
+
+
         % pathlendiff tries to include the width of the distribution of
         % path lengths into the pathoverlap metric as a kind of
         % normalization, what other metrics could I use?
-        pathoverlap(i,j) = max(1.0*near1/N1,1.0*near2/N2) - 0.4*abs(N1-N2)/pathlendiff; % Why? 
-%         pathoverlap(i,j) = max(1.0*near1/N1,1.0*near2/N2) - 0.2*abs(N1-N2)/pathlendiff; % Why? 
+
+        pathoverlap(i,j) = max(1.0*near1/N1,1.0*near2/N2) - diffFactor*abs(N1-N2)/pathlendiff; % Why? 
         pathoverlap(j,i) = pathoverlap(i,j);
+
+        % Try "raw" Jaccard similarity:
+%         pathoverlap(i,j) = sum(ismember(path1,path2))/length(unique([path1 path2])); % The equations work for paths containing non-repeating elements
+%         pathoverlap(j,i) = pathoverlap(i,j);
+
+        % Try Jaccard with distance based overlap as intersection
+%         pathoverlap(i,j) = max(near1,near2)/length(unique([path1 path2]));
+%         pathoverlap(j,i) = pathoverlap(i,j);
     end
 end
 
@@ -32,14 +59,16 @@ end
 % figure; dendrogram(linkagemat,1000)
 
 pathoverlap(pathoverlap<overlapcutoff) = 0; % default overlapcutoff would be 0.75
-% generate pdist format similarity matrix
+% generate pdist format similarity matrix (required when using similarity!)
+save(fullfile(pathCalcdir,"workspace.mat"),'pathoverlap','-append');
+
 overlapvect = squareform(1-pathoverlap,'tovector');
 %overlapvect = squareform(pathdis,'tovector');
-linkagemat = linkage(overlapvect,'average');
+linkagemat = linkage(overlapvect,'average'); 
 
 cophCorr = cophenet(linkagemat,overlapvect); % How well do the distances in 
 % linkage reflect the distances in the data? A low number means we need to
-% change the way we define overlap
+% change the way we define overlap or linkage method
 
 
 % determine inconsistent coeffs: clusters with high inconsistency naturally
@@ -58,10 +87,9 @@ cophCorr = cophenet(linkagemat,overlapvect); % How well do the distances in
 
 % determine optimal 'cutoff' with another method: 
 
+%% cutofflist = 2:min(200,Npath/10);
+cutofflist = [2:1:50 52:2:100 105:5:200 210:10:round(Npath/10)];
 
-% cutofflist = 2:1:Npath/10; % This takes too much time when we take more
-% pathways than just 10% 
-cutofflist = 2:min(200,Npath/10);
 meansepratio = zeros(length(cutofflist),1);
 meanintraoverlap = zeros(length(cutofflist),1);
 meaninteroverlap = zeros(length(cutofflist),1);
@@ -75,10 +103,18 @@ hold
 set(gca,'Fontsize',16)
 xlabel('No. of clusters','Fontsize',16)
 ylabel('Pathway overlap','Fontsize',16)
+title('Clustering step 1')
 
 for cut=cutofflist
+
+    % Hierarchical:
     %T = cluster(linkagemat,'cutoff',cut);
     T = cluster(linkagemat,'maxclust',cut);
+    
+    % Spectral:
+%     T = spectralcluster(1-pathoverlap,cut,'Distance','precomputed','ClusterMethod','kmeans');
+
+
     ncls = max(T);
     % compute intra-cluster overlaps
     intraoverlap = zeros(ncls,1);
@@ -151,14 +187,20 @@ legend('Mean intra-cluster overlap','Mean inter-cluster overlap',...
     'Min intra-cluster overlap','Max inter-cluster overlap',...
     'Cluster separation efficiency')
 box on
-
+%%
 % optimum clustering should be intraoverlap>=75%, interoverlap<=50%,
 % max(sep ratio)
 [temp,ind] = max(meansepratio(meanintraoverlap>0.75...
     & meaninteroverlap<0.5));
 temp = cutofflist(meanintraoverlap>=0.75 & meaninteroverlap<=0.5);
 nclsoptim = temp(ind);
+
+% Hierarchical
 T = cluster(linkagemat,'maxclust',nclsoptim);
+
+% Spectral:
+% T = spectralcluster(1-pathoverlap,nclsoptim,'Distance','precomputed','ClusterMethod','kmeans');
+
 
 % assign clusters to pathstruc
 for i=1:Npath
@@ -173,13 +215,14 @@ ncls = nclsoptim;
 for i=1:ncls
     ind = find([pathstruc(I(1:Npath)).cls] == i);
     pathresidues = unique([pathstruc(I(ind)).path]);
-    channelstruc(i).hub = pathresidues;
+    channelstruc(i).hub = pathresidues; % This channelstruc is temporary 
     for j=1:length(pathresidues)
        count = 0;
-       for k=ind
+       for k=ind % this hubstrength is used for channel similarity, so need
+           % to weigh it by MI
             count = count + ismember(pathresidues(j),pathstruc(I(k)).path);
        end
-       channelstruc(i).hubstrength(j) = count;
+       channelstruc(i).hubstrength(j) = count; 
        %respathwaycount(pathresidues(j)) = respathwaycount(pathresidues(j))+count;
     end
 end
@@ -229,7 +272,14 @@ inconscoeff = inconscoeff(:,4);
 cutofflist = 2:1:ncls;
 meansepratio = zeros(length(cutofflist),1);
 for cut=cutofflist
+    
+    
+    % Hierarchical
     T = cluster(linkagemat,'maxclust',cut);
+    
+    % Spectral:
+%     T = spectralcluster(1-similarity,cut,'Distance','precomputed','ClusterMethod','kmeans');
+
     ncls1 = max(T);
     intraoverlap = zeros(ncls1,1);
     for i=1:ncls1
@@ -268,13 +318,32 @@ plot(meansepratio,'-')
 set(gca,'Fontsize',16)
 xlabel('No. of clusters','Fontsize',16)
 ylabel('Cluster separation efficiency','Fontsize',16)
+title('Clustering step 2')
 
 [maxsepratio,ncls1] = max(meansepratio);
 hold on
 scatter(ncls1,maxsepratio,50,'fill','r')
 legend('meansepratio','Optimum cluster nbr','location','best')
 legend boxoff
+
+% Hierarchical
 T = cluster(linkagemat,'maxclust',ncls1);
+
+% Spectral:
+% T = spectralcluster(1-similarity,ncls1,'Distance','precomputed','ClusterMethod','kmeans');
+
+% OR try DBscan
+% epsilon = 0.005; % no easy way to tell epsilon
+% minpts = 20; 
+% 
+% [T, corepts] = dbscan(1-pathoverlap,epsilon,minpts,'Distance','precomputed');
+% [max(T) sum(T==-1)]
+% 
+% for i=1:Npath
+%     pathstruc(I(i)).cls = T(i);
+% end
+% ncls = max(T);
+
 
 % assign new cls numbers
 for i=1:Npath
@@ -282,6 +351,7 @@ for i=1:Npath
     pathstruc(I(i)).cls = T(temp);
 end
 ncls = ncls1;
+
 
 
 % sort clusters by size

@@ -151,5 +151,6 @@ else
     plotAlloDensityFun(PDB,pathstruc,BSres,'MIFractionCutoff',MIFractionCutoff,'optRes',GPIres,'cut',[0.1 0.2 0.3 0.5],'title', 'BS2GP');
     savefig(fullfile(pathCalcdir,"alloDensity_bs2gp"))
 end
+ save(fullfile(pathCalcdir,"workspace.mat"),'density','-append')
 % If protein is inversed along z, use this command to make it upright again
 % set(gca,'zdir','reverse')

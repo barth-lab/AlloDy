@@ -3,18 +3,53 @@
 % indexOfCluster_pca, centroid_pca, p, ind_centers
 
 %% Plot PCA1/2 colored by run and by cluster
-C=[];
-figure
-pcaRange = range(p,'all');
-nFramesEff = zeros(mainSim.runCount,1);
-for i = 1:mainSim.runCount
-    % Take into consideration runs with different number of frames
-    nFramesEff(i) = (size(mainSim.traj{i},1) - settings.frames2skip - 1)+1; % Frames used in calculations
-    framesNdx = ((settings.frames2skip+1):size(mainSim.traj{i},1))';
-    Ctemp = [i*ones(nFramesEff(i),1) framesNdx];
-    C=[C ;Ctemp];% Used for coloring and for labeling: [ run frameNdx]
-end
+% C is now initialized in md2pathMain
 
+atomIndices = ligandChain.getLigandAtoms();
+traj = mainSim.concatRuns('Atoms', atomIndices, 'StartFrame', settings.frames2skip + 1);
+
+if strcmp(trjTypeLigand, 'DistancesCoord') || strcmp(trjTypeLigand, 'VectorsCoord')
+    % Ligand atom choice
+    ndxLigand = ~selectname(mainEntry.pdb.name,'H*') & selectname(mainEntry.pdb.chainid,settings.chains(Chains.ligand));
+    % Which receptor residues to consider?
+    % receptorLigandResIds
+    
+    % Calculate distances
+    % Calculate minimum distance between any residue pair and ligand
+    concatTraj = mainSim.concatRuns('StartFrame', settings.frames2skip + 1);
+    nFrames = size(concatTraj,1);
+    minDis = zeros(nFrames,length(receptorLigandResIds));
+    minDisVector = zeros(nFrames,3*length(receptorLigandResIds));
+    
+    for i = 1:length(receptorLigandResIds)
+        resHere = receptorLigandResIds(i);
+        ndx1 = selectid(mainEntry.pdb.resseq,resHere) & ~selectname(mainEntry.pdb.name,'H*') & selectname(mainEntry.pdb.chainid,settings.chains(Chains.receptor));
+    
+        % calcMinDis function seems to be working properly, I tested it
+        % against VMD via inspection of selected BB-SC and SC-SC
+        % interactions
+        [minDis(:,i), minDisVector(:,(3*i-2:3*i))] = calcMinDis(concatTraj,ndxLigand,ndx1); 
+    end
+if strcmp(trjTypeLigand, 'DistancesCoord')
+    traj = [traj minDis]; % Add minimum distance between ligand binding residues and ligand
+elseif strcmp(trjTypeLigand, 'VectorsCoord')
+    traj = [traj minDisVector]; % Add min. dis. vectors
+end
+end
+[indexOfCluster_pca, centroid_pca, p, ind_centers] = cluster_traj_pca(traj, kPrinComp, settings.kClusters, [], settings.kmax);
+save(saveVarName,'indexOfCluster_pca','centroid_pca','p','ind_centers','-append');
+clear traj;
+
+figPath = fullfile(pcadir, "pca_scatter_" + name);
+savefig( figPath + ".fig");
+print2pdf(figPath);
+
+add2log(md2pathdir, "PCA clustering of ligand pose performed!");
+
+%%
+pcaRange = range(p, 'all');
+
+figure
 scatter(p(:,1),p(:,2),5,C(:,1),'filled')
 hold on
 for i = 1:mainSim.runCount

@@ -1,33 +1,32 @@
 %% What to do with clusters?
 % Extract trajectories of every cluster
 % Find ligand binding residues
-% We need the cluster indices for this section: indexOfCluster_pca
+% We need the cluster indices for this section: clusterNdx_filtered_all
 
 % Inputs
 %  - C
-%  - indexOfCluster_pca
+%  - clusterNdx_filtered_all
 %  - receptorGpResIds
 %  - pcadir
 
-% Extract cluster trajectories:
-c2Analyze = [1 2]; % clusters to analyze
-c2Analyze(c2Analyze > max(indexOfCluster_pca)) = []; % Remove clusters that
-% don't exist to avoid errors later
-
-importantCutOff = 0.7; % use more stringent cutoff here than md2path
-% Dual cutoff contact scheme: two atoms come into contact if within
-% rcut1 but only disconnect when they're further than rcut2
-rcut1 = 3.5;
-rcut2 = 5;
-pcaContactCut = 0.1; % Would be different than normal contact cut where the
-% cutoff is "spread" over different runs
-
-
+% Options for subruns: (Now they're in md2pathmain)
+%         % Extract cluster trajectories:
+%         c2Analyze = [1 2]; % clusters to analyze
+%         c2Analyze(c2Analyze > max(clusterNdx_filtered_all)) = []; % Remove clusters that
+%         % don't exist to avoid errors later
+%         
+%         importantCutOff = 0.7; % use more stringent cutoff here than md2pathmain
+%         % Dual cutoff contact scheme: two atoms come into contact if within
+%         % rcut1 but only disconnect when they're further than rcut2
+%         rcut1 = 3.5;
+%         rcut2 = 5;
+%         pcaContactCut = 0.1; % Would be different than normal contact cut where the
+%         % cutoff is "spread" over different runs
 %% Create one simulation object for each cluster
 
 % Don't forget to have the dihedrals loaded in mainSim!
 
-clusterSims = arrayfun(@(Ci) mainSim.createSubset(C(indexOfCluster_pca == Ci, :), 'DihedralMatIndices', indexOfCluster_pca == Ci), c2Analyze);
+clusterSims = arrayfun(@(Ci) mainSim.createSubset(C(clusterNdx_filtered_all == Ci, :), 'DihedralMatIndices', clusterNdx_filtered_all == Ci), c2Analyze);
 % clusterSims = arrayfun(@(Ci) mainSim.createSubset(C(indexOfCluster_pca_filtered == Ci, :), 'DihedralMatIndices', indexOfCluster_pca_filtered == Ci), c2Analyze);
 
 %% Calculate ligand contact map

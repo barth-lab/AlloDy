@@ -17,6 +17,7 @@ classdef Simulation < handle
 
     methods
         function obj = Simulation(entry)
+            global settings;
             obj.entry = entry;
         end
 
@@ -65,7 +66,7 @@ classdef Simulation < handle
         function computeDihedrals(obj, chain, options)
             arguments
                 obj
-                chain = []
+                chain = [] % Chain object
                 options.HigherOrder = 'all'
                 options.Path
                 options.ReSortPath
@@ -77,7 +78,13 @@ classdef Simulation < handle
                 load(options.Path, 'dihedrals', 'reSort');
             else
                 concatTraj = obj.concatRuns('StartFrame', options.StartFrame);
-                [dihedrals, ~, reSort] = calcalldihedralsfromtrajs(obj.entry.pdb, concatTraj, options.ResIds, 1, options.HigherOrder);
+                if ~isempty(chain) % Take dihedrals only from input chain
+                    [indices, ~] =  obj.entry.getAtoms('Chain',chain.index);
+                    pdbChain = substruct(obj.entry.pdb, indices);
+                    [dihedrals, ~, reSort] = calcalldihedralsfromtrajs(pdbChain, concatTraj(:,to3(indices)), options.ResIds, 1, options.HigherOrder);
+                else
+                    [dihedrals, ~, reSort] = calcalldihedralsfromtrajs(obj.entry.pdb, concatTraj, options.ResIds, 1, options.HigherOrder);
+                end
 
                 if isfield(options, 'Path')
                     save(options.Path, 'dihedrals', 'reSort');
@@ -270,6 +277,31 @@ classdef Simulation < handle
                 rmsd(:, runIndex) = calcrmsd(obj.traj{runIndex}(1, :), obj.traj{runIndex}(1:obj.trajLength, :), atomIndices);
             end
         end
+        
+        function rmsd = computeRmsdAllFramePairs(obj, atomIndices, options)
+            arguments
+                obj
+                atomIndices
+                options.StartFrame = 1
+            end
+            
+            C=[];
+            nFramesEff = zeros(obj.runCount,1);
+            for i = 1:obj.runCount
+                % Take into consideration runs with different number of frames
+                nFramesEff(i) = (size(obj.traj{i},1) - options.StartFrame)+1; % Frames used in calculations
+                framesNdx = ((options.StartFrame):size(obj.traj{i},1))';
+                Ctemp = [i*ones(nFramesEff(i),1) framesNdx];
+                C=[C ;Ctemp];% Used for coloring and for labeling: [ run frameNdx]
+            end
+            
+            
+            trajTemp = obj.concatRuns('Atoms', atomIndices, 'StartFrame', options.StartFrame);
+            rmsdMap = zeros(size(trajTemp,1));
+            for runIndex = 1:obj.runCount
+                rmsd(:, runIndex) = calcrmsd(obj.traj{runIndex}(1, :), obj.traj{runIndex}(1:obj.trajLength, :), atomIndices);
+            end
+        end
 
         function rmsf = computeRmsf(obj, atomIndicesInput, options)
             arguments
@@ -327,6 +359,7 @@ classdef Simulation < handle
 
     methods(Static)
         function simulation = query(entry, query)
+            global settings;
             runDirs = dir(query);
             runCount = length(runDirs);
 
@@ -336,7 +369,7 @@ classdef Simulation < handle
 
             for runIndex = 1:runCount
                 directory = runDirs(runIndex);
-                runTraj = readdcdmat(fullfile(directory.folder, directory.name, "traj.dcd"));
+                runTraj = readdcdmat(fullfile(directory.folder, directory.name, settings.xtcName));
 
                 if runIndex == 1
                     minTraj = size(runTraj,1);

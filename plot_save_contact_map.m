@@ -89,6 +89,9 @@ function importantResIds = plot_save_contact_map(contactsPerRun, receptorChain, 
         figPath = fullfile(options.SaveDir, sprintf(options.SaveName, "contact_map_" + ligandName));
         savefig(figPath);
         print2pdf(figPath, 1);
+        
+        disp(size(contactsPruned));  % Check the dimensions
+
 
         %% Save ligand contacting data to excel file
         if isfield(options, 'SaveXlsName')
@@ -98,7 +101,8 @@ function importantResIds = plot_save_contact_map(contactsPerRun, receptorChain, 
         end
 
         xlsPath = fullfile(options.SaveDir, sprintf(xlsName, "ligandContactData") + ".xls");
-
+        %disp(xlsPath);  % Check the dimensions
+        %disp(contactsPruned)
         writematrix(ligandNames, xlsPath, 'Range', 'A2', 'Sheet', options.SaveXlsSheet);
         writematrix(contactsPruned, xlsPath, 'Range', 'B2', 'Sheet', options.SaveXlsSheet);
         writematrix(receptorNames', xlsPath, 'Range', 'B1', 'Sheet', options.SaveXlsSheet);

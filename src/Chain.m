@@ -23,7 +23,7 @@ classdef Chain < handle
             obj.name = name;
 
             obj.atomIndices = selectname(entry.pdb.chainid, name);
-            obj.resIds = unique(entry.pdb.resseq(entry.pdb.chainid == char(name)));
+            obj.resIds = unique(entry.pdb.resseq(entry.pdb.chainid == char(name)),'stable');
         end
 
         function [pdb, crd] = export(obj)

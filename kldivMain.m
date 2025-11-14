@@ -6,12 +6,27 @@
 % 3- Double check histogramming, do we need to zeroStretchtotwopi the
 % dihedrals before inputting them?
 
+%% Initialize variables:
+global settings;
 
+if ~isfield(settings,'frames2skipRef') 
+    settings.frames2skipRef=settings.frames2skip;
+end
+
+if ~isfield(settings,'includeLigPathwayCalc') 
+    settings.includeLigPathwayCalc = false;
+end
+
+if ~isfield(settings,'pdbCodeExtra') 
+    settings.pdbCodeExtra = [];
+end
+
+klDivFileName = ['klDiv_' settings.refName  '.mat'];
 %% Load, fetch and align PDB files and trajectories
 database = Database(settings.databasePath);
 
 % Chains: [receptor, G protein, ligand]
-database.read(fullfile(settings.mydir, "prot.pdb"), settings.chains, settings.mainName);
+database.read(fullfile(settings.mydir, "prot_pymol.pdb"), settings.chains, settings.mainName);
 % Load the KLDiv reference structure:
 database.read(fullfile(settings.refdir, "prot.pdb"), settings.chains, settings.refName );
 
@@ -21,6 +36,9 @@ if ~isempty(settings.pdbCode)
 
     if ~isempty(settings.pdbCodeInactive)
         database.fetch(settings.pdbCodeInactive, settings.pdbInactiveChains);
+    end
+    for i = 1:length(settings.pdbCodeExtra)
+        database.fetch(settings.pdbCodeExtra{i}, settings.pdbChainsExtra{i});
     end
 end
 
@@ -53,7 +71,8 @@ for j=1:2
     
     if length(areThereDCDs) < settings.numRuns
         % run VMD from command line:  vmd -dispdev text -e
-        pathToScript = fullfile(pwd(), "load_save.tcl");  % assumes script is in current directory
+        [scriptPath, ~, ~] = fileparts(mfilename('fullpath'));
+        pathToScript = fullfile(scriptPath, "load_save.tcl");  % assumes script is in the same directory
         cmdStr       = "vmd -dispdev text -e " + pathToScript + " -args " + dirHere + " " + num2str(settings.numRuns) + " " + num2str(settings.stride) + " " + database.entries{j}.path + " " + settings.xtcName;
         system(cmdStr);
 %         add2log(md2pathdir, "Transformed .xtc files to .dcd files with the following command: """ + cmdStr + """");
@@ -64,7 +83,7 @@ end
 mainSim = mainEntry.addSimulation(fullfile(settings.mydir, "run*"));
 refSim = refEntry.addSimulation(fullfile(settings.refdir, "run*"));
 
-md2pathdir = fullfile(settings.mydir, "md2path");
+md2pathdir = fullfile(settings.mydir, "md2pathdev");
 
 % Create md2pathdir if it does not exist
 if ~exist(md2pathdir, 'dir')
@@ -84,8 +103,10 @@ end
 % Test system
 if settings.includeLigPathwayCalc
     receptorResIds = mainChain.concatResIds(ligandChain);
+    receptorResIdsRef = refChain.concatResIds(ligandChain);
 else
     receptorResIds = mainChain.resIds;
+    receptorResIdsRef = refChain.resIds;
 end
 
 % if settings.alignTestRefDih % When Test and ref sims have different residue numbers/length
@@ -100,19 +121,21 @@ mainSim.computeDihedrals( ...
 );
 
 % Reference system
-refSim.computeDihedrals( 'Path', fullfile(settings.refdir, "md2path","dihedrals.mat"),...
+refSim.computeDihedrals( 'Path', fullfile(settings.refdir, "md2pathdev","dihedrals.mat"),...
     'ReSortPath', fullfile(md2pathdir, "reSortRef.txt"), ...
-    'ResIds', receptorResIds, ...
-    'StartFrame', settings.frames2skip + 1 ...
+    'ResIds', receptorResIdsRef, ...
+    'StartFrame', settings.frames2skipRef  + 1 ...
 );
-
 %% Dihedral union:
 % Now that we have dihedral time series, find the union of the two
 % dihedral lists to input into the KL divergence function
 
  [reSortCommon, reSortCommonRef] = mainSim.reconcileDihedralList(refSim,'Path', fullfile(md2pathdir, "reSortKLDiv.mat"));
+% Still a problem in deconcile dihedrals when resort is renumbered but the
+% PDB is not
 
-
+% Problem when one PDB starts at 1 but the other doesn't AND there is
+% length difference
  %% Calculate KL divergence:
  
  % First order first
@@ -120,7 +143,7 @@ refSim.computeDihedrals( 'Path', fullfile(settings.refdir, "md2path","dihedrals.
      mainSim.dihedralsMat(:,mainSim.klDivStuff.reSortndxHere), settings.nBlocks, ...
      'Grassberger', settings.Grassberger, 'SignificanceThreshold', settings.st);
  mainSim.klDivStuff.kl1 = kl1;
- save(fullfile(md2pathdir, "klDiv.mat"),'kl1')
+ save(fullfile(md2pathdir, klDivFileName),'kl1')
  %% 2nd order if you want: (Hint: I don't want)
 %  
 %  if exist(fullfile(md2pathdir, "klDiv.mat"),'file')
@@ -156,9 +179,9 @@ tiledlayout(3,3)
 for i =1:9
     nexttile
     binLimitsHere = binLimits(dihedralsRef(:,kl1ndx(i)),dihedralsTest(:,kl1ndx(i)));
-    histogram(dihedralsRef(:,kl1ndx(i)),50, 'BinLimits', binLimitsHere, 'Normalization','pdf')
-    hold on 
     histogram(dihedralsTest(:,kl1ndx(i)),50, 'BinLimits', binLimitsHere, 'Normalization', 'pdf')
+    hold on 
+    histogram(dihedralsRef(:,kl1ndx(i)),50, 'BinLimits', binLimitsHere, 'Normalization','pdf')
 
     % Find the resname and dihType:
     dihType = reSortCommon(kl1ndx(i),2);
@@ -181,13 +204,16 @@ end
 figPath = fullfile(md2pathdir,['kl1_dihedrals_' mainEntry.name '_' refEntry.name]);
 savefig(figPath + ".fig");
 print2pdf(figPath+ ".pdf");
-clear dihedralsRef dihedralsTest
+% clear dihedralsRef dihedralsTest
 
 %%  Find KLDiv residue-wise
 % Visualize it on the structure
 
 kl1Res = zeros(length(receptorResIds),1);
 kl1BB_SC = zeros(length(receptorResIds),2); % Column 1 is BB, 2nd is SC KL1
+
+receptorResIdsNdx = zeros(max(receptorResIds),1); % Helpful for indexing
+receptorResIdsNdx(receptorResIds)=1:length(receptorResIds); % Hoping this would do the trick
 
 isSC = reSortCommon(:,2)==0; % List of side chain dihedrals
 isBB =  reSortCommon(:,2)~=0; % List of backbone dihedrals
@@ -199,7 +225,7 @@ for i = 1:length(receptorResIds)
     kl1BB_SC(i,2) = sum(kl1(reSortCommon(:,1) == resHere & isSC)); % Fill in sidechain KL1
 
 end
-save(fullfile(md2pathdir, "klDiv.mat"),'kl1','kl1Res');
+save(fullfile(md2pathdir, klDivFileName),'kl1','kl1Res');
 
 
 
@@ -225,7 +251,7 @@ figure('Renderer', 'painters', 'Position', [10 10 1200 600])
 % hold on
 % legend_count = 2;
 
-b = bar(kl1BB_SC,'stacked');
+b = bar(receptorResIds, kl1BB_SC,'stacked'); % Use receptor IDs as X? 
 b(1).FaceColor =  [0.6500 0.2250 0.0980]; %[0.6350 0.0780 0.1840]
 b(2).FaceColor = [.3 .75 .6]; %[0.3010 0.7450 0.9330];
 
@@ -244,20 +270,27 @@ legend_count = 3;
 % Add ligand binding residues
 if exist(fullfile(md2pathdir,'BS_residues.txt'),'file')
     bsRes.main = importdata(fullfile(md2pathdir,'BS_residues.txt'));
-    scatter(bsRes.main,kl1Res(bsRes.main), 'LineWidth',1.5)
+    scatter(bsRes.main,kl1Res(receptorResIdsNdx(bsRes.main)), 'LineWidth',1.5)
     legend_entries{legend_count} = 'Binding residues';
     legend_count = legend_count + 1;
 end
 if exist(fullfile(settings.refdir,'md2path','BS_residues.txt'),'file')
     bsRes.ref = importdata(fullfile(settings.refdir,'md2path','BS_residues.txt'));
-    scatter(bsRes.ref,kl1Res(bsRes.ref), 25, 'filled')
+
+    % Translate bsRef to main numbering before plotting:
+    ndxMainRef = [database.residues{1}.output1 database.residues{1}.output2];
+    bsResRefRenum = zeros(size(bsRes.ref));
+    for resi = 1:length(bsRes.ref)
+        bsResRefRenum(resi) = ndxMainRef(ndxMainRef(:,2)==bsRes.ref(resi),1);
+    end
+    scatter(bsResRefRenum,kl1Res(bsResRefRenum), 25, 'filled')
     legend_entries{legend_count} = 'Ref binding residues';
     legend_count = legend_count + 1;
 end
 
 if ~isempty(mutations)
-    s3 = scatter(mutRes, kl1Res(mutRes),80, 'LineWidth',1.5);
-    text(mutRes,kl1Res(mutRes) +0.05*max(kl1Res),mutations)
+    s3 = scatter(mutRes, kl1Res(receptorResIdsNdx(mutRes)),80, 'LineWidth',1.5);
+    text(mutRes,kl1Res(receptorResIdsNdx(mutRes)) +0.05*max(kl1Res),mutations)
     row = dataTipTextRow('Mut',mutations);
     s3.DataTipTemplate.DataTipRows(end+1) = row;
 
@@ -266,7 +299,7 @@ if ~isempty(mutations)
 end
 
 if ~isempty(settings.highlightRes)
-    scatter(settings.highlightRes, kl1Res(settings.highlightRes),60,'x', 'LineWidth',1.5);
+    scatter(settings.highlightRes, kl1Res(receptorResIdsNdx(settings.highlightRes)),60,'x', 'LineWidth',1.5);
     legend_entries{legend_count} = settings.highlightText;
     legend_count = legend_count + 1;
 end

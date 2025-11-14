@@ -2,6 +2,7 @@ classdef Database < handle
     properties
         dir
         entries
+        entryState % defines state of entry: 0 1 2 3 --> (simulation, active, intive, other)
         residues
     end
 
@@ -10,13 +11,17 @@ classdef Database < handle
         function obj = Database(dir)
             obj.dir = dir;
             obj.entries = cell(1, 0);
+            obj.entryState = zeros(1,0);
 
             if ~exist(obj.dir, 'dir')
                 mkdir(obj.dir)
             end
         end
 
-        function fetch(obj, pdbCode, targetChainNames)
+        function fetch(obj, pdbCode, targetChainNames, stateHere)
+            if nargin < 4
+                stateHere = 3; % assume it's an "other" state
+            end
             filename = fullfile(obj.dir, pdbCode + ".pdb");
             % add2log("Fetching PDB " + pdbCode + " to " + filename);
 
@@ -25,12 +30,16 @@ classdef Database < handle
                 websave(filename, url);
             end
 
-            obj.read(filename, targetChainNames, pdbCode);
+            obj.read(filename, targetChainNames, pdbCode, stateHere);
         end
 
-        function read(obj, path, targetChainNames, name)
+        function read(obj, path, targetChainNames, name, stateHere)
+            if nargin <5
+                stateHere = 0; % assume we're inputing simulation data
+            end
             entry = Entry(path, targetChainNames, name);
             obj.entries{end + 1} = entry;
+            obj.entryState(end + 1) = stateHere;
 
             entry.database = obj;
             entry.databaseIndex = length(obj.entries);
@@ -110,11 +119,11 @@ classdef Database < handle
             end
         end
         
-        function [tempCell, obj] = findMut(obj, entryIndex, chainIndex, fastaPath)
+        function [tempCell, mutPos, obj] = findMut(obj, entryIndex, chainIndex, fastaPath)
             % Read sequence from database and pdb
 
             [~, seqRef] = fastaread(fastaPath);
-             seqTest = obj.entries{entryIndex}.seq{chainIndex};
+            seqTest = obj.entries{entryIndex}.seq{chainIndex};
              % align and compare
             [~,b] = nwalign(seqRef,seqTest);
             
@@ -209,21 +218,42 @@ classdef Database < handle
             for entryIndex = 1:length(obj.entries)
                 entry = obj.entries{entryIndex};
                 atomIndices = entry.getAtoms('Chain', 1, 'Name', 'CA', 'Residues', feature(entryIndex, :));
-
-                if isempty(entry.simulation)
-                    output{entryIndex} = calcbond(entry.crd, atomIndices');
+                
+                if feature(entryIndex,1) == 0 || feature(entryIndex,2) == 0
+                    output{entryIndex} = nan;
                 else
-%                     data = zeros(entry.simulation.runCount, size(entry.simulation.traj{1}, 1));
-                    data = cell(entry.simulation.runCount,1);
 
-                    for runIndex = 1:entry.simulation.runCount
-%                         data(runIndex, :) = calcbond(entry.simulation.traj{runIndex}, atomIndices');
-                        data{runIndex} = calcbond(entry.simulation.traj{runIndex}, atomIndices');
+                    if isempty(entry.simulation)
+                        output{entryIndex} = calcbond(entry.crd, atomIndices');
+                    else
+    %                     data = zeros(entry.simulation.runCount, size(entry.simulation.traj{1}, 1));
+                        data = cell(entry.simulation.runCount,1);
+    
+                        for runIndex = 1:entry.simulation.runCount
+    %                         data(runIndex, :) = calcbond(entry.simulation.traj{runIndex}, atomIndices');
+                            data{runIndex} = calcbond(entry.simulation.traj{runIndex}, atomIndices');
+                        end
+    
+                        output{entryIndex} = data;
                     end
-
-                    output{entryIndex} = data;
                 end
             end
+        end
+
+        function output = calcDihedral(obj, feature, chainIndex)
+            
+            output =[];
+
+            
+            for entryIndex = 1:length(obj.entries)
+                entry = obj.entries{entryIndex};
+                % Take care of chains outside of calcdihedral function to avoid doubly numbered residues
+                [indices, crd] =  entry.getAtoms('Chain',chainIndex);
+                pdbChain = substruct(entry.pdb, indices);
+                [dihedrals, ~, ~, ~] = calcalldihedralsfromtrajs(pdbChain, crd, feature(entryIndex, :), 1, 'all');
+                output = [output dihedrals];
+            end
+            output = output';
         end
     end
 end

@@ -58,8 +58,8 @@ function [receptorGpResIdsInput, receptorGpResIdsRef] = calc_plot_gp_contact_map
         gproteinChain = refEntry.chains{Chains.gprotein};
 
         contacts = refEntry.computeContacts(receptorChain, gproteinChain);
-        plotContacts(contacts, "Contact map of reference", receptorChain, gproteinChain, 'SaveDir', options.SaveDir, 'SaveName', saveName + "_ref");
-        % contacts = contacts(:, 1:length(receptorChain.resIds));
+        %plotContacts(contacts, "Contact map of reference", receptorChain, gproteinChain, 'SaveDir', options.SaveDir, 'SaveName', saveName + "_ref");
+        contacts = contacts(:, 1:length(receptorChain.resIds));
 
         receptorRes = receptorResidues(receptorResidues{:, refEntry.databaseIndex} > 0, :);
         gproteinRes = gproteinResidues(gproteinResidues{:, refEntry.databaseIndex} > 0, :);
@@ -144,7 +144,7 @@ function plotContacts(contacts, figTitle, xChain, yChain, xResIds, yResIds, opti
     end
 
     if ~isempty(options.SaveDir)
-        figPath = fullfile(options.SaveDir, options.SaveName);
+        figPath = fullfile(options.SaveDir, options.SaveName+ ".fig");
         savefig(figPath);
         print2pdf(figPath, 1);
     end
