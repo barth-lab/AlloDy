@@ -72,6 +72,10 @@ function [receptorGpResIdsInput, receptorGpResIdsRef] = calc_plot_gp_contact_map
         col(col>size(receptorRes,1))=[]; % Clean any contacts that are with
         % residues not found in the input pdb
         receptorGpResIdsRef = receptorRes{col, inputEntry.databaseIndex};
+        if any(receptorGpResIdsRef==0) % Zero from misalignments
+            receptorGpResIdsRef(receptorGpResIdsRef==0)=[]; % remove misalignments
+            warning('receptorGpResIds may have been affected by a misalignment, please double check!')
+        end
     else
         receptorGpResIdsRef = [];
     end

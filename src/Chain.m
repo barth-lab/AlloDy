@@ -23,7 +23,7 @@ classdef Chain < handle
             obj.name = name;
 
             obj.atomIndices = selectname(entry.pdb.chainid, name);
-            obj.resIds = unique(entry.pdb.resseq(entry.pdb.chainid == char(name)));
+            obj.resIds = unique(entry.pdb.resseq(entry.pdb.chainid == char(name)),'stable');
         end
 
         function [pdb, crd] = export(obj)
@@ -63,7 +63,10 @@ classdef Chain < handle
 
         function output = getLigandAtoms(obj)
             if obj.isSmall
-                output = obj.entry.getAtoms('Chain', obj.index, 'NoName', 'H*');
+%                 output = obj.entry.getAtoms('Chain', obj.index, 'NoName', 'H*');
+                indices = selectname(obj.entry.pdb.chainid, obj.name);
+                indices = indices &  ~selectname(obj.entry.pdb.name, 'H*','LP*');
+                output = find(indices);
             else
                 output = obj.entry.getAtoms('Chain', obj.index, 'Name', 'CA');
             end

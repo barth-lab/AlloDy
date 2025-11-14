@@ -163,6 +163,8 @@ function  pathCalcdir = prepareAlloPathCalc(simulation, receptorChain, settings,
     variables.reSort = simulation.reSort;
     variables.includeLigPathwayCalc = settings.includeLigPathwayCalc;
     variables.isGPCR = settings.isGPCR;
+    variables.diagnosticsOn = settings.diagnosticsOn;
+    variables.MIWeightPaths = settings.MIWeightPaths;
     if settings.isGPCR
         variables.all_BS = all_BS;
         variables.all_EC = all_EC;

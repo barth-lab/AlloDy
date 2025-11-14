@@ -49,11 +49,26 @@ for i=1:ncls
     pathMaxMI(i) = (paths(index));
 end
 
-
+clsMImean = zeros(ncls,1);
+clsMIstd = zeros(ncls,1);
 clsMIsorted = sortrows(clsMI,[1,-2,-3]);
 for i=1:ncls
     clsMImean(i) = mean(clsMI(clsMI(:,1)==i,3));
+    clsMIstd(i) = std(clsMI(clsMI(:,1)==i,3));
 end
+if diagnosticsOn
+    figure; 
+    scatter(1:ncls,clsMImean,clsSize,'filled','MarkerFaceAlpha',0.5)
+    hold on
+    errorbar(1:ncls,clsMImean,clsMIstd./max(sqrt(clsSize-1),1),'.')
+    xlabel('Cluster')
+    ylabel('Mean MI')
+    title('Mean cluster MI')
+    set(gca,'FontSize',16)
+    savefig(fullfile(pathCalcdir,"cluster_mean_MI"));
+    print2pdf(fullfile(pathCalcdir,"cluster_mean_MI"));
+end
+
 
 % compute spread of each cluster
 for cl=1:ncls
@@ -83,10 +98,13 @@ end
 
 
 % write out cluster stat
-writematrix([clsSizeOrder';clsSize(clsSizeOrder)';clsMImean(clsSizeOrder); ...
+% writematrix([clsSizeOrder';clsSize(clsSizeOrder)';clsMImean(clsSizeOrder); ...
+%     clsspread(clsSizeOrder)]', fullfile(pathCalcdir,"cls_stat.txt"),'Delimiter'," ")
+writematrix([clsSizeOrder';clsSize(clsSizeOrder)';clsMImean(clsSizeOrder)'; ...
     clsspread(clsSizeOrder)]', fullfile(pathCalcdir,"cls_stat.txt"),'Delimiter'," ")
 
 % Find which residues are heavily involved in cross-channel communication
+% By counting times in which residue shows up in every cluster
 res_cross_freq = zeros(Nres,ncls+2);
 for i=1:Nres
     freq = zeros(ncls,1);
@@ -223,8 +241,12 @@ for i=1:length(channelstruc)
     channelstruc(i).hub = pathresidues;
     for j=1:length(pathresidues)
        count = 0;
-       for k=ind
-            count = count + ismember(pathresidues(j),pathstruc(I(k)).path);
+       for k=ind          
+            if MIWeightPaths
+                count = count + ismember(pathresidues(j),pathstruc(I(k)).path)*pathstruc(I(k)).MI;
+            else
+                count = count + ismember(pathresidues(j),pathstruc(I(k)).path);  
+            end
        end
        channelstruc(i).hubstrength(j) = count;
        respathwaycount(pathresidues(j)) = respathwaycount(pathresidues(j))+count;

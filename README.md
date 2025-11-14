@@ -95,8 +95,8 @@ Run *md2pathMain.m* or *kldivMain.m*. All the output can be found in a folder ca
 To run pathway calculation for individual trajectory clusters, setup and run *pca_1b_ligandPathCalcClusters.m* after the PCA and dihedrals sections in *md2pathmain.m*
 
 Typical runtime for calculations: 
-md2path: ~ 1 hour from start to finish on a typical PC and for around 15000-20000 frames of trajectory of a 300-400 residue GPCR
-kldiv: a few minutes assuming you only calculate 1st order KL divergences
+- md2path: ~ 1 hour from start to finish on a typical PC and for around 15000-20000 frames of trajectory of a 300-400 residue GPCR
+- kldiv: a few minutes assuming you only calculate 1st order KL divergences
 
 ## Acknowledgements:
 - Mutual information statistical filtering: McClendon et al., J Chem Theory Comput (2009)

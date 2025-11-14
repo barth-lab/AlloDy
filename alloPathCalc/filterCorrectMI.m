@@ -1,4 +1,4 @@
-function excessMi = filterCorrectMI(dihedralsMat, mi, options)
+function [excessMi, binMiArray, iiArray, significanceArray] = filterCorrectMI(dihedralsMat, mi, options)
     arguments
         dihedralsMat
         mi
@@ -79,6 +79,9 @@ function excessMi = filterCorrectMI(dihedralsMat, mi, options)
         xlabel("Mutual information");
         ylabel("Independent information");
 
+        significanceArray = zeros(options.InterpBinCount,1);
+        binMiArray = zeros(options.InterpBinCount,1);
+        iiArray = zeros(options.InterpBinCount,1); 
         for binIndex = 1:options.InterpBinCount
             % Values and indices (with respect to miFlat) of all pairs contained in this bin
             binIndices = find(bins == binIndex);
@@ -135,6 +138,10 @@ function excessMi = filterCorrectMI(dihedralsMat, mi, options)
 
             plot(edges(binIndex:(binIndex + 1)), [ii ii], 'k');
             scatter(binMi, repmat(ii, length(binMi), 1), 3, plotColors);
+            
+            significanceArray(binIndex) = significant;
+            binMiArray(binIndex) = mean(binMi);
+            iiArray(binIndex) = ii;
         end
 
         if isfield(options, 'SaveDir')

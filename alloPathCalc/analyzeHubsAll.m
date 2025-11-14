@@ -1,9 +1,22 @@
 % Identify all residues that are involved in pathways
 clear allhubsFreq allhubsFreqAll
 allhubs = [pathstruc(I(1:Npath)).path];
+allhubsMI = zeros(size(allhubs));
+count = 1;
+for i=1:Npath % Grab corresponding path pair MI for every hub in allhubs
+    allhubsMI(count:count+pathstruc(I(i)).Npath-1) = pathstruc(I(i)).MI;
+    count = count + pathstruc(I(i)).Npath;
+end
+
 allhubsList = unique(allhubs);
+allhubsFreq = zeros(size(allhubsList));
 for i=1:length(allhubsList)
-    allhubsFreq(i) = sum(allhubs==allhubsList(i));
+    if MIWeightPaths
+        ndxHere = allhubs==allhubsList(i);
+        allhubsFreq(i) = sum(allhubsMI(ndxHere)); % scale counted pathways with pair MI
+    else
+        allhubsFreq(i) = sum(allhubs==allhubsList(i)); % count pathways
+    end
 end
 allhubsData = [allhubsList; allhubsFreq]';
 allhubsData = sortrows(allhubsData,-2);
@@ -61,11 +74,19 @@ BAIhubsFreq = zeros(Nres,1);
 BAIres1 = BAIres(BAIres>0);
 for i=1:Npath
     path = pathstruc(I(i)).path;
-    if(sum(ismember(path,GPIres1))>0)
-        GPIhubsFreq(path) = GPIhubsFreq(path)+1;
+    if(sum(ismember(path,GPIres1))>0)       
+        if MIWeightPaths
+            GPIhubsFreq(path) = GPIhubsFreq(path) + pathstruc(I(i)).MI;
+        else
+            GPIhubsFreq(path) = GPIhubsFreq(path)+1; % count pathways
+        end
     end
-    if(sum(ismember(path,BAIres1))>0)
-        BAIhubsFreq(path) = BAIhubsFreq(path)+1;
+    if(sum(ismember(path,BAIres1))>0)    
+        if MIWeightPaths
+            BAIhubsFreq(path) = BAIhubsFreq(path) + pathstruc(I(i)).MI; 
+        else
+            BAIhubsFreq(path) = BAIhubsFreq(path)+1; % count pathways
+        end
     end
 end
 writematrix([GPIhubsFreq BAIhubsFreq],fullfile(pathCalcdir,"allhubResiduesAll.txt"),'Delimiter','tab')

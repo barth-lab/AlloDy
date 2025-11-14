@@ -10,10 +10,22 @@ MIavg = mean(MIres(MIres>0));
 
 % connect residues closer than disCutOff in the graph using their MI values
 % (inverted so that min distance becomes max MI)
+% Functions to "invert" MI need to be monotonic and positive, decreasing as 
+% MI increases
+
+% Options
+% 1.1*MImax-MIres(i,j): linear function that gives any difference in MI the
+% same weight
+% 1/MIres(i,j): pronounces differences between "low" and "high" MI regimes 
+% exp(-MIres(i,j)): an attractive alternative that pronounces differences 
+% between "low" and "high" MI regimes without exploding close to zero
+
 for i=1:Nres-1
     for j=i+1:Nres
         if (dismat(i,j)<=disCutOff)
-            Gmat(i,j) = 1.1*MImax-MIres(i,j);
+%             Gmat(i,j) = 1.1*MImax-MIres(i,j);
+%             Gmat(i,j) =  1/MIres(i,j);
+            Gmat(i,j) = exp(-MIres(i,j));
             Gmat(j,i) = Gmat(i,j);
             Gmatmajor(i,j) = Gmat(i,j);
             Gmatmajor(j,i) = Gmat(j,i);
@@ -88,7 +100,6 @@ end
 
 % sort allosteric pairs by MI
 
-
 %[Y,I] = sortrows(reshape(MIallo,Nres*Nres,1),-1);
 [Y,I] = sortrows([pathstruc(:).MI]',-1);
 rankMI(I) = (1:length(I));
@@ -97,18 +108,49 @@ rankMI(I) = (1:length(I));
 rankmeanpathMI(J) = (1:length(J));
 [dum,K] = sortrows((rankMI.*rankmeanpathMI)',1);
 
-
+% Find number of paths considered according to user-defined MI fraction
 cumMI = cumsum([pathstruc(I).MI]);
 Npath = find(cumMI > cumMI(end) * MIFractionCutoff, 1);
 
-% Moved to options in auto script
-% nearcutoff = 7.5;
-% overlapcutoff = 0.75;
-
-
+if diagnosticsOn % Diagnostic figure: MI distribution over pathways
+    pathPairMI = [pathstruc(I(1:Npath)).MI];
+    pathMeanMI = [pathstruc(I(1:Npath)).meanpathMI];
+    pathMIRatio = pathMeanMI./pathPairMI ;
+    pathMIRatioPlot = pathMIRatio;
+    
+    figure('Renderer', 'painters', 'Position', [10 10 1500 500]); 
+    tiledlayout(1,2)
+    nexttile
+    scatter(1:Npath,pathMeanMI,5,'filled','MarkerFaceAlpha',0.5)
+    hold on
+    plot(pathPairMI,'LineWidth',2)
+    xlabel('Pathway (ranked)')
+    ylabel('MI')
+    ylimHere = ylim;
+    yyaxis right
+    ylabel('Path MI ratio')
+    
+    scatter(1:Npath,pathMIRatioPlot,5,'d','filled','MarkerFaceAlpha',0.5)
+    legend('Path mean MI','Path pair MI','Path MI Ratio')
+    set(gca,'FontSize',16)
+    
+    nexttile
+    histogram(pathMeanMI,'orientation','horizontal')
+    hold on
+    histogram(pathPairMI ,'orientation','horizontal')
+    ylim(ylimHere)
+    legend('Path mean MI','Path pair MI')
+    ylabel('MI')
+    xlabel('Counts')
+    set(gca,'FontSize',16)
+    savefig(fullfile(pathCalcdir,"path_pair_vs_mean_MI"));
+    print2pdf(fullfile(pathCalcdir,"path_pair_vs_mean_MI"));
+end 
 %% Plot pair MI
 
-figure;
+figure('Renderer', 'painters', 'Position', [10 10 1500 500]); 
+tiledlayout(1,2)
+nexttile
 hold on;
 
 cumMIfiltered = normalizeMiCumsum(MI);
@@ -123,14 +165,14 @@ xlabel("Ranked dihedral pairs");
 ylabel("MI normalized cumulative sum");
 ytickformat('percentage');
 
-title("Pair MI");
+title("Pair MI: dihedral pairs included after filtering");
 legend("Filtered MI", sprintf("Top %.1f%% dihedrals", significantCount / length(cumMIfiltered) * 100), "Raw MI", 'Location', 'best');
 legend boxoff;
 
+% Plot pathway MI
 
-%% Plot pathway MI
-
-figure;
+% figure;
+nexttile
 hold on;
 plot(cumMI / cumMI(end) * 100, 'LineWidth', 1);
 
@@ -141,13 +183,14 @@ xlabel("Ranked pathways");
 ylabel("MI normalized cumulative sum");
 ytickformat('percentage');
 
-title("Pathway MI");
+title("Pathway MI: paths included under MI fraction cutoff");
 legend("Filtered MI", ("Top " + num2str(Npath / length(pathstruc) * 100, 3) + "% pathways, " + num2str(cumMI(Npath) / cumMI(end) * 100, 3) + "% MI"), 'Location', 'best');
 legend boxoff;
 
 savefig(fullfile(pathCalcdir,"pathway_MI_percentage"));
 print2pdf(fullfile(pathCalcdir,"pathway_MI_percentage"));
 
+save(fullfile(pathCalcdir,"workspace.mat"),'Gmatmajor','G','-append');
 %% Utility functions
 
 function output = flattenTriu(input)

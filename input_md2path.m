@@ -12,14 +12,14 @@
 %% Main input variables:
 
 % Main data directory
-settings.mydir = '/PATH/TO/DIR';
+settings.mydir = 'D:\Telework_library\dopamine_phase_3\16-d2_dop_I125N';
 
 % Path for the database used by md2path
-settings.databasePath = '/PATH/TO/DATABASE';
-settings.systemName = 'NAME'; % Points to the residue table in the database
+settings.databasePath = 'C:\Users\mahdi\Documents\md2pathDatabase\';
+settings.systemName = 'DD2R'; % Points to the residue table in the database
 
 % Name of the trajectory file in each run
-settings.xtcName = 'traj.xtc';
+settings.xtcName = 'step7_noPBC_prot.xtc';
 
 % Number of frames to remove at the start of the simulation
 settings.frames2skip = 500;
@@ -29,16 +29,24 @@ settings.frames2skip = 500;
 settings.chains = 'ACB';
 
 % Reference PDB code that this simulation is based on
-settings.pdbCode = '3SN6';
+settings.pdbCode = '6VMS';
 settings.pdbChains = 'RA-';
 
 % Inactive state reference PDB, used for dihedral comparison
-settings.pdbCodeInactive = '3D4S';
+settings.pdbCodeInactive = '6CM4';
 settings.pdbInactiveChains = 'A--';
 
 % Extra PDBs for reference (in conformational landscape plots for example)
-settings.pdbCodeExtra = {'7DHR','7F1R'};
-settings.pdbChainsExtra = {'RA-','RA-'};
+% Note: double check the alignment in database.residues{1}: if a
+% misalignment exists in the residues used from conf. landscape
+% calculation, there will an error!
+settings.pdbCodeExtra = {'6LFO','7F1R'};
+settings.pdbChainsExtra = {'RAD','RA-'};
+
+% Which pdb should be used as reference for generic GPCR numbering?
+% 2 means settings.pdbCode will be taken as reference
+% 3 means settings.pdbCodeInactive will be
+settings.refPDBNdx = 2; 
 
 % Number of runs
 settings.numRuns = 5;
@@ -46,14 +54,14 @@ settings.numRuns = 5;
 % How many frames to skip when saving xtcs to dcds
 settings.stride = 5;
 
-% Activates GPCR specfic options (calculating 7 TM helices and
+% Actiavtes GPCR specfic options (calculating 7 TM helices and
 % GPCR allosteric path calculation, as well as planned GPCR order parameters)
 settings.isGPCR = true;
 
 % Residues to be ignored in the pathway calculation, usually you want to
 % ignore floppy termini or long loops that introduce noise into the system.
 % Defaults to first and last 4 residues of the receptor chain. Assumes that
-% protRenum, true to its name, is renumbered starting from 1.
+% protein-renum, true to its name, is renumbered starting from 1.
 settings.excludedResidues = [];
 
 % The residues belonging to the 7 helical turns of a GPCR, If
@@ -77,6 +85,7 @@ settings.baiResidues = [];
 % Do principle component analysis on the ligand binding pose as
 % well as the receptor conformations
 settings.doPCA = true;
+settings.kPrinComp = 2;
 
 % Number of clusters for PCA analysis of the ligand, if empty,
 % the code will calculate it automatically, BUT it will take time!!!
@@ -85,6 +94,28 @@ settings.kClusters = [];
 % Maximum number of clusters to consider during PCA clustering,
 % only give this option if kClusters is empty!!!
 settings.kmax = 15;
+
+% Type of input to do PCA on the protein trajectory
+% Could be: 'CA', 'DihAll', 'DihBB', 'DihSC', and 'Distances'
+% 'Distances' requires additional options: settings.NdisPCA and
+% settings.CGPCA
+settings.trjType = 'CA';
+
+% Type of input to do PCA on ligand trajectory:
+% Could be 'Default', 'VectorsCoord', and 'DistancesCoord'
+% 'Default' gives CAs if ligand is peptide or not H atoms if ligand is
+% small
+settings.trjTypeLigand = 'Default'; 
+
+% Custom PCA selection (residue numbers):
+settings.CustomPCAselection = [];
+settings.CustomPCAName =[];
+
+% Remove frames that do not belong to desired states from dihedral/MI
+% calculation
+% WARNING: requires user input during run at the "Calculate GPCR order
+% parameters" section
+settings.cullStates = true;
 
 % Include ligand (peptide only for now) in pathway calculations
 % NOTE: take extra care when using this option, as the pathway part of
@@ -110,3 +141,9 @@ settings.nearCutoff = 7.5;
 
 % Amount of overlap required for pathways to be considered near
 settings.overlapCutoff = 0.75;
+
+% Diagnostic plots on?
+settings.diagnosticsOn = true;
+
+% Weight pathways by MI post-clustering? (WARNING: experimental)
+settings.MIWeightPaths = true;

@@ -1,4 +1,4 @@
-function params = calcPlotOrderParametersClusters(database, refEntry, clusterNdx, options)
+function [params, ndxXY, clusterNdx_filtered] = calcPlotOrderParametersClusters(database, refEntry, clusterNdx, options)
   arguments
     database
     refEntry
@@ -7,6 +7,7 @@ function params = calcPlotOrderParametersClusters(database, refEntry, clusterNdx
     options.SavePath
     options.frames2skip = 1 % 1 does not skip any frames, ironically
     options.nClusters =  min(max(clusterNdx),3) % Defaults to plotting 3 clusters, or less if there are less than 3
+    options.cullFrames = false  % Remove frames from simulation according to user input 
   end
 
   res3 = database.findResidue("3.50");
@@ -38,6 +39,8 @@ function params = calcPlotOrderParametersClusters(database, refEntry, clusterNdx
   plots{2}.title = "TM3-6 vs TM3-7";
   plots{2}.name = "param_tm36_tm37_clusters";
 
+  ndxXY = cell(2,1); % Index for state culling
+%   clusterNdx_filtered= cell(2,1); % Cluster index for state culling
   for currentPlotIndex = 1:size(plots)
     currentPlot = plots{currentPlotIndex};
 
@@ -117,6 +120,50 @@ function params = calcPlotOrderParametersClusters(database, refEntry, clusterNdx
       savefig(figPath);
       print2pdf(figPath);
     end
+
+     if options.cullFrames % Cull frames according the user input:
+        activeLimits = input("Input X and Y limits for " + plots{1}.title +" for " + num2str(options.nClusters) ... 
+             +" clusters; Input format: [XminC1 XmaxC1 YminC1 YmaxC1; XminC2 XmaxC2 YminC2 YmaxC2] ...");
+
+        figure( 'Position', [10 10 1500 600]); % May need some tinkering
+        tiledlayout(1,options.nClusters);
+        clusterNdx_filtered(:,currentPlotIndex) = zeros(size(clusterNdx));
+
+        ndxXY{currentPlotIndex} = zeros(length(mainX), options.nClusters); % Index for frames within limits
+
+        for thisCluster = 1:options.nClusters
+        
+            ndx1 = mainX < activeLimits(thisCluster,2) & mainX > activeLimits(thisCluster,1);
+            ndx2 = mainY < activeLimits(thisCluster,4) & mainY > activeLimits(thisCluster,3);
+            
+            ndxXY{currentPlotIndex}(:,thisCluster) = ndx2 & ndx1; 
+
+            % Plot excluded frames
+            nexttile
+            temp = ndxXY{currentPlotIndex}(:,thisCluster) & clusterNdx==thisCluster;
+            clusterNdx_filtered(temp,currentPlotIndex) = thisCluster;
+
+            scatter(mainX(clusterNdx==thisCluster),mainY(clusterNdx==thisCluster),5,'filled')
+            
+            hold on
+            scatter(mainX(temp),mainY(temp),5,'filled')
+
+            xlim(xl);
+            ylim(yl);
+            legend(['All frames: ' num2str(sum(clusterNdx==thisCluster))], ['Included frames: ' num2str(sum(temp))])
+            legend boxoff
+            title(['Cluster C' num2str(thisCluster)])
+            formatplot2;
+            if isfield(options, 'SavePath')
+              figPath = fullfile(options.SavePath, sprintf(options.SaveName, currentPlot.name + "_excluded_frames"));
+              savefig(figPath);
+              print2pdf(figPath);
+            end
+        end
+     else % All frames are taken
+
+        clusterNdx_filtered(:,currentPlotIndex) = clusterNdx;
+     end
   end
 end
 
