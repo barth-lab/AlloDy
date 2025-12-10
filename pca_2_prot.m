@@ -47,7 +47,7 @@ end
 [indexOfCluster_pcaProt, centroid_pcaProt, pProt, ind_centersProt] = cluster_traj_pca(traj, kPrinComp, settings.kClusters, [], settings.kmax);
 clear traj;
 
-figPath = fullfile(pcadir, "prot_pca_scatter_" + trjType + "_" +  mainEntry.name);
+figPath = fullfile(pcadir, "prot_pca_scatter_" + trjType + "_" +  mainEntry.name+ ".fig");
 savefig(figPath);
 print2pdf(figPath);
 
@@ -87,7 +87,7 @@ end
   legend boxoff
 
 % Save the plot
-figPath = fullfile(pcadir, "prot_pca_run_scatter_"+ trjType + "_" +  mainEntry.name);
+figPath = fullfile(pcadir, "prot_pca_run_scatter_"+ trjType + "_" +  mainEntry.name+ ".fig");
 savefig(figPath);
 print2pdf(figPath);
 
@@ -185,6 +185,9 @@ hm.Title = ['Receptor RMSD [' char(197) '] matrix PCA centers '];
 hm.XLabel = 'PCA Cluster';
 hm.YLabel = 'PCA Cluster';
 figPath = fullfile(pcadir, "prot_pcarmsdMatrix_"+ trjType + "_" +  mainEntry.name);
+if ~endsWith(figPath, '.fig')
+    figPath = figPath+'.fig';
+end
 savefig(figPath);
 print2pdf(figPath);
 
@@ -215,5 +218,9 @@ legend(legend_text','location','EastOutside','fontsize', 16)
 set(gcf, 'Position',  [100, 100, 700, 400]) % Resize window
 
 figPath = fullfile(pcadir, "prot_pcaDensity_"+ trjType + "_" +  mainEntry.name);
+if ~endsWith(figPath, '.fig')
+    figPath = figPath + ".fig";
+end
+
 savefig(figPath);
 print2pdf(figPath);
